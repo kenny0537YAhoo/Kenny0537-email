@@ -1,41 +1,40 @@
-name: Form Webhook HTML Writer
+name: Webhook Form Writer
 
 on:
-  # This listens for any incoming data from GitHub's infrastructure
+  # This tells the 'New' repo to wake up when ANY activity hits its dispatch API URL
   repository_dispatch:
-    types: [push, *] # Accepts default broadcast flags from urlencoded forms
+    types: [*]
 
 jobs:
   write-and-deploy:
     runs-on: ubuntu-latest
     permissions:
-      contents: write
+      contents: write # Allows GitHub to write code directly to this repository
 
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      # This parses the raw incoming form package
-      - name: Process Form Webhook Content
+      - name: Generate the HTML file
         run: |
           cat << 'EOF' > index.html
           <!DOCTYPE html>
           <html>
           <head>
-              <title>Live URL Form Deployment</title>
+              <title>New Repo Live Site</title>
           </head>
           <body>
-              <h1>Form Webhook Successfully Received!</h1>
-              <p>This page was instantly updated via an x-www-form-urlencoded pipeline.</p>
-              <p>Server Time: $(date)</p>
+              <h1>Successfully Written to New Repo!</h1>
+              <p>This file was created automatically by a form webhook event triggered from the kenny repo.</p>
+              <p>Last Processed: $(date)</p>
           </body>
           </html>
           EOF
 
-      - name: Push Code Live
+      - name: Save and Commit Changes
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git add index.html
-          git diff-index --quiet HEAD || git commit -m "Updated via form webhook payload"
+          git diff-index --quiet HEAD || git commit -m "HTML written via kenny repo webhook"
           git push

@@ -12,7 +12,7 @@ jobs:
       - name: Checkout Kenny
         uses: actions/checkout@v4
 
-      # 2. Log directly into the News Repo using your profile's shared authorization token
+      # 2. Log directly into the News Repo using your profile's shared token
       - name: Open Connection to News Repo
         uses: actions/checkout@v4
         with:
@@ -39,9 +39,7 @@ jobs:
               <div class="card">
                   <h1>Live Chat Update</h1>
                   <p style="color: #666;">Message processed entirely on autopilot via Kenny:</p>
-                  
                   <div class="output">${{ toJSON(github.event.client_payload) }}</div>
-                  
                   <div class="footer" style="margin-top:20px; font-size:12px; color:#aaa; text-align: right;">Updated: $(date)</div>
               </div>
           </body>
@@ -56,4 +54,7 @@ jobs:
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git add index.html
           git diff-index --quiet HEAD || git commit -m "Automated Chat Sync from Kenny Engine"
+          
+          # This line forces git to upload straight to New and wakes up your webhook screen!
+          git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/kenny0537YAhoo/New.git
           git push origin HEAD

@@ -1,40 +1,72 @@
-name: Webhook Form Writer
+name: Full Redirect Message Catch Engine
 
 on:
-  # This tells the 'New' repo to wake up when ANY activity hits its dispatch API URL
   repository_dispatch:
-    types: [*]
+    types: [*] # Listens directly for your inbound webhook form redirect stream
+
+# Clear out any previous live deployments so only the newest updates run
+concurrency:
+  group: "pages"
+  cancel-in-progress: true
 
 jobs:
-  write-and-deploy:
+  build-and-deploy-live:
     runs-on: ubuntu-latest
     permissions:
-      contents: write # Allows GitHub to write code directly to this repository
+      contents: write # Allows editing your single index.html file
+      pages: write    # Grants permission to compile the live website
+      id-token: write # Unlocks secure deployment infrastructure tokens
 
     steps:
-      - name: Checkout Code
+      - name: Checkout Code Files
         uses: actions/checkout@v4
 
-      - name: Generate the HTML file
+      # This creates your single active webpage directly from the webhook data string
+      - name: Write Standalone HTML Webpage
         run: |
           cat << 'EOF' > index.html
           <!DOCTYPE html>
           <html>
           <head>
-              <title>New Repo Live Site</title>
+              <meta charset="UTF-8">
+              <meta name="viewport" content="width=device-width, initial-scale=1.0">
+              <title>Live Stream Output</title>
+              <style>
+                  body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; padding: 30px; background: #fdfdfd; display: flex; justify-content: center; align-items: center; min-height: 80vh; margin: 0; }
+                  .message-card { width: 100%; max-width: 600px; background: #ffffff; padding: 40px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); border: 1px solid #eaeaea; }
+                  h1 { font-size: 24px; color: #111111; margin-top: 0; font-weight: 700; }
+                  .output-box { background: #f8f9fa; border-left: 4px solid #0066cc; padding: 20px; border-radius: 4px; font-family: monospace; white-space: pre-wrap; word-break: break-all; color: #2b2b2b; font-size: 15px; margin-top: 20px; line-height: 1.6; }
+                  .footer { font-size: 11px; color: #a0a0a0; margin-top: 30px; text-align: right; }
+              </style>
           </head>
           <body>
-              <h1>Successfully Written to New Repo!</h1>
-              <p>This file was created automatically by a form webhook event triggered from the kenny repo.</p>
-              <p>Last Processed: $(date)</p>
+              <div class="message-card">
+                  <h1>Live Message Update</h1>
+                  <p style="color: #666; margin: 0;">The data below was captured entirely server-side from your redirect link stream:</p>
+                  
+                  <div class="output-box">${{ toJSON(github.event.client_payload) }}</div>
+                  
+                  <div class="footer">Server Generated: $(date)</div>
+              </div>
           </body>
           </html>
           EOF
 
-      - name: Save and Commit Changes
+      - name: Force Save Page Changes
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git add index.html
-          git diff-index --quiet HEAD || git commit -m "HTML written via kenny repo webhook"
+          git diff-index --quiet HEAD || git commit -m "Active HTML updated directly from webhook redirect data string"
           git push
+
+      - name: Setup GitHub Pages Environment
+        uses: actions/configure-pages@v5
+
+      - name: Bundle Artifact for Hosting
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: '.' # Compiles only the root directory containing your single index.html file
+
+      - name: Deploy Live to Internet
+        uses: actions/deploy-pages@v4

@@ -1,0 +1,41 @@
+name: Form Webhook HTML Writer
+
+on:
+  # This listens for any incoming data from GitHub's infrastructure
+  repository_dispatch:
+    types: [push, *] # Accepts default broadcast flags from urlencoded forms
+
+jobs:
+  write-and-deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      # This parses the raw incoming form package
+      - name: Process Form Webhook Content
+        run: |
+          cat << 'EOF' > index.html
+          <!DOCTYPE html>
+          <html>
+          <head>
+              <title>Live URL Form Deployment</title>
+          </head>
+          <body>
+              <h1>Form Webhook Successfully Received!</h1>
+              <p>This page was instantly updated via an x-www-form-urlencoded pipeline.</p>
+              <p>Server Time: $(date)</p>
+          </body>
+          </html>
+          EOF
+
+      - name: Push Code Live
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add index.html
+          git diff-index --quiet HEAD || git commit -m "Updated via form webhook payload"
+          git push
